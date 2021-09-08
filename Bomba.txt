@@ -1,0 +1,124 @@
+bool iguales(char *correctPassword, char *passwordPut)
+{
+  int dig = 0;
+  for (int i = 0; i < 6; i++) {
+    if (correctPassword[i] == passwordPut[i])
+    {
+      dig = dig + 1;
+    }
+  }
+  if (dig == 6)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+void setup() {
+  Serial.begin(115200);
+}
+
+void toggle() {
+  static uint32_t previousMillis = 0;
+  static const uint32_t interval = 400;
+  static bool taskInit = false;
+  static const uint8_t ledPin =  3;
+  static uint8_t ledState = LOW;
+  
+  if (taskInit == false) {
+    pinMode(ledPin, OUTPUT);
+    taskInit = true;
+  }
+  uint32_t currentMillis = millis();
+  if ( (currentMillis - previousMillis) >= interval) {
+    previousMillis = currentMillis;
+    if (ledState == LOW) {
+      ledState = HIGH;
+    } else {
+      ledState = LOW;
+    }
+    digitalWrite(ledPin, ledState);
+  }
+}
+void bomba() {
+  static unsigned long previousMillis = 0;
+  static unsigned long intervalo = 1000;
+  static char correct[6] = {'8', '8', '7', '5', '1', '1'};
+  static char ingresada[6];
+  static int counter = 0;
+  static int estado = 1;
+  static int cuentaAtras = 20;
+  unsigned long currentMillis = millis();
+
+
+  switch (estado) {
+    case 1: {
+        if (Serial.available() > 0)
+        {
+          char dato = Serial.read();
+          if ((char)dato == 'd' && cuentaAtras> 10)
+          {
+            regresiva--;
+            Serial.println(cuentaAtras);
+          }
+          else if ((char)dato == 'u' && cuentaAtras< 60)
+          {
+            regresiva++;
+            Serial.println(cuentaAtras);
+          }
+          else if ((char)dato == 'a')
+          {
+            estado = 2;
+            previousMillis = millis();
+            counter = 0;
+
+          }
+        }
+
+        break;
+      }
+    case 2: {
+        if (Serial.available() > 0) {
+          ingresada[counter] = Serial.read();
+
+          
+          counter = counter + 1;
+          if (counter == 6) {
+            if (iguales(correct, ingresada))
+            {
+              estado = 1;
+              regresiva = 60;
+              Serial.println("Desarmada");
+            }
+            counter = 0;
+          }
+        }
+        if ( (millis() - previousMillis) >= intervalo)
+        {
+          previousMillis = millis();
+          if (cuentaAtras > 0)
+          {
+            Serial.println(cuentaAtras);
+            cuentaAtras= cuentaAtras- 1;
+          }
+          else
+          {
+            estado = 1;
+            regresiva = 60;
+            Serial.println("Detonación");
+          }
+        }
+
+        break;
+      }
+    default:
+      Serial.println("Error");
+      break;
+  }
+}
+void loop() {
+  bomba();
+  toggle();
+}
